@@ -61,12 +61,13 @@ class Worker:
         self.rank = self.rank if self.rank is not None else int(
             os.getenv("RANK", "-1"))
         local_rank = int(os.getenv("LOCAL_RANK", "0"))
-        self.device = torch.device(f"cuda:{local_rank}")
+        self.device = torch.device(f"cuda:{local_rank}") if torch.cuda.is_available() else torch.device("cpu")
         if self.rank < 0:
             raise ValueError("Invalid or unspecified rank.")
-        torch.cuda.set_device(self.device)
+        if torch.cuda.is_available():
+            torch.cuda.set_device(self.device)
 
-        _check_if_gpu_supports_dtype(self.model_config.dtype)
+            _check_if_gpu_supports_dtype(self.model_config.dtype)
 
         # Initialize the distributed environment.
         _init_distributed_environment(self.parallel_config, self.rank,
@@ -87,27 +88,32 @@ class Worker:
     ) -> Tuple[int, int]:
         # Profile the memory usage of the model and get the maximum number of
         # cache blocks that can be allocated with the remaining free memory.
-        torch.cuda.empty_cache()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         # Execute a forward pass with dummy inputs to profile the memory usage
         # of the model.
         self.model_runner.profile_run()
-
-        # Calculate the number of blocks that can be allocated with the
-        # profiled peak memory.
-        torch.cuda.synchronize()
-        free_gpu_memory, total_gpu_memory = torch.cuda.mem_get_info()
-        peak_memory = total_gpu_memory - free_gpu_memory
-
         cache_block_size = CacheEngine.get_cache_block_size(
             block_size, self.model_config, self.parallel_config)
-        num_gpu_blocks = int(
-            (total_gpu_memory * gpu_memory_utilization - peak_memory) //
-            cache_block_size)
+
+        if torch.cuda.is_available():
+            # Calculate the number of blocks that can be allocated with the
+            # profiled peak memory.
+            torch.cuda.synchronize()
+            free_gpu_memory, total_gpu_memory = torch.cuda.mem_get_info()
+            peak_memory = total_gpu_memory - free_gpu_memory
+
+            num_gpu_blocks = int(
+                (total_gpu_memory * gpu_memory_utilization - peak_memory) //
+                cache_block_size)
+        else:
+            num_gpu_blocks = 0
         num_cpu_blocks = int(cpu_swap_space // cache_block_size)
         num_gpu_blocks = max(num_gpu_blocks, 0)
         num_cpu_blocks = max(num_cpu_blocks, 0)
-        torch.cuda.empty_cache()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         return num_gpu_blocks, num_cpu_blocks
 
     def init_cache_engine(self, cache_config: CacheConfig) -> None:
@@ -180,14 +186,16 @@ def _init_distributed_environment(
             "is not already initialized")
     else:
         torch.distributed.init_process_group(
-            backend="nccl",
+            backend="nccl" if torch.cuda.is_available() else "gloo", # TODO FIX
             world_size=parallel_config.world_size,
             rank=rank,
             init_method=distributed_init_method,
         )
 
     # A small all_reduce for warmup.
-    torch.distributed.all_reduce(torch.zeros(1).cuda())
+    dummy = torch.zeros(1)
+    if torch.cuda.is_available(): dummy = dummy.cuda()
+    torch.distributed.all_reduce(dummy)
     initialize_model_parallel(parallel_config.tensor_parallel_size,
                               parallel_config.pipeline_parallel_size)
 

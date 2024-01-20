@@ -246,7 +246,8 @@ def hf_model_weights_iterator(
             for name, param in state.items():
                 yield name, param
             del state
-            torch.cuda.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
 
 def convert_pyslice_to_tensor(x: Any) -> torch.Tensor:

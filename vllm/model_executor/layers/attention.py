@@ -143,6 +143,7 @@ class PagedAttention(nn.Module):
                 key = key.unflatten(0, (batch_size, seq_len))
                 value = value.unflatten(0, (batch_size, seq_len))
 
+            print("input_metadata.attn_bias = %s" % (input_metadata.attn_bias.shape,)) 
             out = xops.memory_efficient_attention_forward(
                 query,
                 key,

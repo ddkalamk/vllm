@@ -12,6 +12,7 @@ from vllm.model_executor.parallel_utils.utils import divide
 from vllm.model_executor.parallel_utils.communication_op import (
     tensor_model_parallel_all_reduce)
 from vllm.model_executor.utils import set_weight_attrs
+from vllm.utils import get_current_device
 
 
 def pad_vocab_size(vocab_size: int, pad_to: int = 64) -> int:
@@ -68,7 +69,7 @@ class VocabParallelEmbedding(torch.nn.Module):
         self.weight = Parameter(
             torch.empty(self.num_embeddings_per_partition,
                         self.embedding_dim,
-                        device=torch.cuda.current_device(),
+                        device=get_current_device(),
                         dtype=params_dtype))
         set_weight_attrs(self.weight, {
             "parallel_dim": 0,
@@ -125,7 +126,7 @@ class ParallelLMHead(VocabParallelEmbedding):
         if bias:
             self.bias = Parameter(
                 torch.empty(self.num_embeddings_per_partition,
-                            device=torch.cuda.current_device(),
+                            device=get_current_device(),
                             dtype=params_dtype))
             set_weight_attrs(self.bias, {
                 "parallel_dim": 0,

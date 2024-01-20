@@ -32,6 +32,13 @@ def is_hip() -> bool:
     return torch.version.hip is not None
 
 
+def get_current_device():
+    if torch.cuda.is_available():
+        return torch.cuda.current_device()
+    else:
+        return torch.device("cpu")
+
+
 def get_max_shared_memory_bytes(gpu: int = 0) -> int:
     """Returns the maximum shared memory per thread block in bytes."""
     # https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html

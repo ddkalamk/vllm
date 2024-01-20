@@ -31,10 +31,13 @@ def process_requests(engine: LLMEngine,
     while test_prompts or engine.has_unfinished_requests():
         if test_prompts:
             prompt, sampling_params = test_prompts.pop(0)
+            print(f"Request: {request_id}")
             engine.add_request(str(request_id), prompt, sampling_params)
             request_id += 1
 
+        print(f"engine.step start")
         request_outputs: List[RequestOutput] = engine.step()
+        print(f"engine.step end")
 
         for request_output in request_outputs:
             if request_output.finished:
@@ -49,7 +52,9 @@ def initialize_engine(args: argparse.Namespace) -> LLMEngine:
 
 def main(args: argparse.Namespace):
     """Main function that sets up and runs the prompt processing."""
+    print("Before initialize_engine")
     engine = initialize_engine(args)
+    print("After initialize_engine")
     test_prompts = create_test_prompts()
     process_requests(engine, test_prompts)
 
