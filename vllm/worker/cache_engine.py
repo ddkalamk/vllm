@@ -75,16 +75,17 @@ class CacheEngine:
         gpu_cache: List[KVCache] = []
         key_block_shape = self.get_key_block_shape()
         value_block_shape = self.get_value_block_shape()
+        device = "cuda" if torch.version.cuda is not None else "cpu"
         for _ in range(self.num_layers):
             key_blocks = torch.empty(
                 size=(self.num_gpu_blocks, *key_block_shape),
                 dtype=self.dtype,
-                device="cuda",
+                device=device,
             )
             value_blocks = torch.empty(
                 size=(self.num_gpu_blocks, *value_block_shape),
                 dtype=self.dtype,
-                device="cuda",
+                device=device,
             )
             gpu_cache.append((key_blocks, value_blocks))
         return gpu_cache
@@ -93,7 +94,7 @@ class CacheEngine:
         cpu_cache: List[KVCache] = []
         key_block_shape = self.get_key_block_shape()
         value_block_shape = self.get_value_block_shape()
-        pin_memory = not in_wsl()
+        pin_memory = not in_wsl() and torch.version.cuda is not None
         if not pin_memory:
             # Pinning memory in WSL is not supported.
             # https://docs.nvidia.com/cuda/wsl-user-guide/index.html#known-limitations-for-linux-cuda-applications

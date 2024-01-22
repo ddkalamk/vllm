@@ -3,9 +3,16 @@ from typing import List, Optional
 
 import torch
 import torch.nn as nn
-from xformers import ops as xops
-from xformers.ops.fmha.attn_bias import (BlockDiagonalCausalMask,
-                                         LowerTriangularMaskWithTensorBias)
+try:
+    from xformers import ops as xops
+    from xformers.ops.fmha.attn_bias import (BlockDiagonalCausalMask,
+            LowerTriangularMaskWithTensorBias)
+except:
+    xops = None
+    class BlockDiagonalCausalMask:
+        pass
+    class LowerTriangularMaskWithTensorBias:
+        pass
 
 from vllm._C import ops
 from vllm._C import cache_ops
@@ -80,11 +87,16 @@ class PagedAttention(nn.Module):
             shape = [batch_size, seq_len, num_heads * head_size]
         """
         batch_size, seq_len, hidden_size = query.shape
+        print("query: ", query.shape)
         # Reshape the query, key, and value tensors.
         query = query.view(-1, self.num_heads, self.head_size)
         key = key.view(-1, self.num_kv_heads, self.head_size)
         value = value.view(-1, self.num_kv_heads, self.head_size)
 
+        print("input_metadata: ", input_metadata)
+        print("input_metadata.prompt_lens: ", len(input_metadata.prompt_lens))
+        print("input_metadata.slot_mapping: ", input_metadata.slot_mapping.shape)
+        print("query: ", query.shape)
         # Reshape the keys and values and store them in the cache.
         # If key_cache and value_cache are not provided, the new key and value
         # vectors will not be cached. This happens during the initial memory
@@ -120,17 +132,18 @@ class PagedAttention(nn.Module):
             # very attention layer of every iteration.
             # FIXME(woosuk): This is a hack.
             if input_metadata.attn_bias is None:
-                if self.alibi_slopes is None:
-                    attn_bias = BlockDiagonalCausalMask.from_seqlens(
-                        [seq_len] * batch_size)
-                    if self.sliding_window is not None:
-                        attn_bias = attn_bias.make_local_attention(
-                            self.sliding_window)
-                    input_metadata.attn_bias = attn_bias
-                else:
-                    input_metadata.attn_bias = _make_alibi_bias(
-                        self.alibi_slopes, self.num_kv_heads, batch_size,
-                        seq_len, query.dtype)
+                input_metadata.attn_bias = torch.zeros([1])
+                # if self.alibi_slopes is None:
+                #     attn_bias = BlockDiagonalCausalMask.from_seqlens(
+                #         [seq_len] * batch_size)
+                #     if self.sliding_window is not None:
+                #         attn_bias = attn_bias.make_local_attention(
+                #             self.sliding_window)
+                #     input_metadata.attn_bias = attn_bias
+                # else:
+                #     input_metadata.attn_bias = _make_alibi_bias(
+                #         self.alibi_slopes, self.num_kv_heads, batch_size,
+                #         seq_len, query.dtype)
 
             # TODO(woosuk): Too many view operations. Let's try to reduce them
             # in the future for code readability.
@@ -144,16 +157,17 @@ class PagedAttention(nn.Module):
                 value = value.unflatten(0, (batch_size, seq_len))
 
             print("input_metadata.attn_bias = %s" % (input_metadata.attn_bias.shape,)) 
-            out = xops.memory_efficient_attention_forward(
-                query,
-                key,
-                value,
-                attn_bias=input_metadata.attn_bias,
-                p=0.0,
-                scale=self.scale,
-                op=xops.fmha.MemoryEfficientAttentionFlashAttentionOp[0] if
-                (is_hip()) else None,
-            )
+            # out = xops.memory_efficient_attention_forward(
+            #     query,
+            #     key,
+            #     value,
+            #     attn_bias=input_metadata.attn_bias,
+            #     p=0.0,
+            #     scale=self.scale,
+            #     op=xops.fmha.MemoryEfficientAttentionFlashAttentionOp[0] if
+            #     (is_hip()) else None,
+            # )
+            out = query.clone()
             output = out.view_as(query)
         else:
             # Decoding run.

@@ -205,8 +205,8 @@ class ModelRunner:
 
         # When using CUDA graph, we don't need to make the tensors on the GPU
         # because they will be eventually copied to the designated GPU buffer.
-        device = "cpu" if use_captured_graph else "cuda"
-        pin_memory = use_captured_graph and not self.in_wsl
+        device = "cpu" if use_captured_graph or torch.version.cuda is None else "cuda"
+        pin_memory = use_captured_graph and torch.version.cuda is not None and not self.in_wsl
         input_tokens = _make_tensor_with_pad(input_tokens,
                                              max_len=1,
                                              pad=0,
@@ -394,7 +394,7 @@ class ModelRunner:
         num_layers = self.model_config.get_num_layers(self.parallel_config)
         kv_caches = [(None, None)] * num_layers
         self.execute_model(seqs, kv_caches)
-        torch.cuda.synchronize()
+        if torch.version.cuda is not None: torch.cuda.synchronize()
         return
 
     @torch.inference_mode()
@@ -543,6 +543,7 @@ def _make_tensor_with_pad(
     device: Union[str, torch.device] = "cuda",
     pin_memory: bool = False,
 ) -> torch.Tensor:
+    device = device if torch.version.cuda is not None else "cpu"
     padded_x = [_pad_to_max(x_i, max_len, pad) for x_i in x]
     return torch.tensor(padded_x,
                         dtype=dtype,
@@ -560,5 +561,12 @@ def _get_graph_batch_size(batch_size: int) -> int:
 
 
 def _async_h2d(data: list, dtype, pin_memory):
+    if torch.version.cuda is None:
+        pin_memory = False
+        device = "cpu"
+        non_blocking = False
+    else:
+        device = "cuda"
+        non_blocking = True
     t = torch.tensor(data, dtype=dtype, pin_memory=pin_memory)
-    return t.to(device="cuda", non_blocking=True)
+    return t.to(device=device, non_blocking=non_blocking)

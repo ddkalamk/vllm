@@ -1,6 +1,7 @@
 import copy
 import os
 import time
+import torch
 from functools import partial
 from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Tuple, Union
 
@@ -224,6 +225,9 @@ class LLMEngine:
         # operators can be applied to all workers.
         num_gpu_blocks = min(b[0] for b in num_blocks)
         num_cpu_blocks = min(b[1] for b in num_blocks)
+        if torch.version.cuda is None:
+            num_gpu_blocks = num_cpu_blocks
+            num_cpu_blocks = 0
         # FIXME(woosuk): Change to debug log.
         logger.info(f"# GPU blocks: {num_gpu_blocks}, "
                     f"# CPU blocks: {num_cpu_blocks}")
