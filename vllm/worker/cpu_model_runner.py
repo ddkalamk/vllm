@@ -517,6 +517,11 @@ class CPUModelRunnerBase(ModelRunnerBase[TModelInputForCPU]):
                 max_position_embeddings=max_pos_embeddings,
             )
             self.model = self.lora_manager.create_lora_manager(self.model)
+        if self.model_config.tpp_optimizer:
+            from tpp_pytorch_extension.nn import OptimizeForLinear
+            print("TPP Optimizing")
+            OptimizeForLinear(self.model)
+
 
     def get_model(self) -> nn.Module:
         return self.model

@@ -200,6 +200,7 @@ class EngineArgs:
     override_generation_config: Optional[Dict[str, Any]] = None
     enable_sleep_mode: bool = False
     model_impl: str = "auto"
+    tpp_optimizer: bool = False
 
     calculate_kv_scales: Optional[bool] = None
 
@@ -984,6 +985,11 @@ class EngineArgs:
             'be loaded from the model checkpoint if available. '
             'Otherwise, the scales will default to 1.0.')
 
+        parser.add_argument(
+            '--tpp-optimizer',
+            action='store_true',
+            help='This enables TPP optimizations for Linear layers')
+
         return parser
 
     @classmethod
@@ -1031,6 +1037,7 @@ class EngineArgs:
             override_generation_config=self.override_generation_config,
             enable_sleep_mode=self.enable_sleep_mode,
             model_impl=self.model_impl,
+            tpp_optimizer=self.tpp_optimizer,
         )
 
     def create_load_config(self) -> LoadConfig:
