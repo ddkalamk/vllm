@@ -212,6 +212,7 @@ class EngineArgs:
     override_generation_config: Optional[Dict[str, Any]] = None
     enable_sleep_mode: bool = False
     model_impl: str = "auto"
+    tpp_optimizer: bool = False
 
     calculate_kv_scales: Optional[bool] = None
 
@@ -1096,6 +1097,11 @@ class EngineArgs:
             "using. This is used to parse the reasoning content into OpenAI "
             "API format. Required for ``--enable-reasoning``.")
 
+        parser.add_argument(
+            "--tpp-optimizer",
+            action="store_true",
+            help="This enables TPP optimizations for Linear layers")
+
         return parser
 
     @classmethod
@@ -1155,6 +1161,7 @@ class EngineArgs:
             override_generation_config=self.override_generation_config,
             enable_sleep_mode=self.enable_sleep_mode,
             model_impl=self.model_impl,
+            tpp_optimizer=self.tpp_optimizer,
         )
 
     def create_load_config(self) -> LoadConfig:

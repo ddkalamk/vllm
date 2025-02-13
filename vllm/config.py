@@ -261,6 +261,7 @@ class ModelConfig:
         enable_sleep_mode: bool = False,
         override_generation_config: Optional[dict[str, Any]] = None,
         model_impl: Union[str, ModelImpl] = ModelImpl.AUTO,
+        tpp_optimizer: bool = False,
     ) -> None:
         self.model = model
         self.hf_config_path = hf_config_path
@@ -274,6 +275,7 @@ class ModelConfig:
         self.rope_scaling = rope_scaling
         self.rope_theta = rope_theta
         self.model_impl = model_impl
+        self.tpp_optimizer = tpp_optimizer
 
         if hf_overrides is None:
             hf_overrides = {}
