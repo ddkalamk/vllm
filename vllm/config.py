@@ -413,6 +413,8 @@ class ModelConfig:
     - "transformers" will use the Transformers model implementation."""
     override_attention_dtype: Optional[str] = None
     """Override dtype for attention"""
+    tpp_optimizer: bool = False
+    """Enables TPP optimizations for Linear layers"""
 
     def compute_hash(self) -> str:
         """

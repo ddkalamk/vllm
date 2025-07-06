@@ -61,6 +61,10 @@ class CPUModelRunner(GPUModelRunner):
             self.model = self.load_lora_model(self.model, self.model_config,
                                               self.scheduler_config,
                                               self.lora_config, self.device)
+        if self.model_config.tpp_optimizer:
+            from tpp_pytorch_extension.nn import OptimizeForLinear
+            print("TPP Optimizing")
+            OptimizeForLinear(self.model)
 
     def warming_up_model(self) -> None:
         logger.info("Warming up model for the compilation...")

@@ -456,6 +456,8 @@ class EngineArgs:
     model_impl: str = ModelConfig.model_impl
     override_attention_dtype: str = ModelConfig.override_attention_dtype
 
+    tpp_optimizer: bool = False
+
     calculate_kv_scales: bool = CacheConfig.calculate_kv_scales
 
     additional_config: dict[str, Any] = \
@@ -931,6 +933,11 @@ class EngineArgs:
                             action='store_true',
                             help='Disable logging statistics.')
 
+        parser.add_argument('--tpp-optimizer',
+                            action='store_true',
+                            help='This enables TPP optimizations for Linear'
+                            ' layers')
+
         return parser
 
     @classmethod
@@ -994,6 +1001,7 @@ class EngineArgs:
             enable_sleep_mode=self.enable_sleep_mode,
             model_impl=self.model_impl,
             override_attention_dtype=self.override_attention_dtype,
+            tpp_optimizer=self.tpp_optimizer,
         )
 
     def create_load_config(self) -> LoadConfig:
