@@ -417,6 +417,8 @@ class ModelConfig:
     available.\n
     - "vllm" will use the vLLM model implementation.\n
     - "transformers" will use the Transformers model implementation."""
+    tpp_optimizer: bool = False
+    """Enables TPP optimizations for Linear layers"""
 
     def compute_hash(self) -> str:
         """

@@ -430,6 +430,8 @@ class EngineArgs:
         get_field(ModelConfig, "override_generation_config")
     model_impl: str = ModelConfig.model_impl
 
+    tpp_optimizer: bool = False
+
     calculate_kv_scales: bool = CacheConfig.calculate_kv_scales
 
     additional_config: dict[str, Any] = \
@@ -885,6 +887,11 @@ class EngineArgs:
                             action='store_true',
                             help='Disable logging statistics.')
 
+        parser.add_argument('--tpp-optimizer',
+                            action='store_true',
+                            help='This enables TPP optimizations for Linear'
+                            ' layers')
+
         return parser
 
     @classmethod
@@ -946,6 +953,7 @@ class EngineArgs:
             override_generation_config=self.override_generation_config,
             enable_sleep_mode=self.enable_sleep_mode,
             model_impl=self.model_impl,
+            tpp_optimizer=self.tpp_optimizer,
         )
 
     def create_load_config(self) -> LoadConfig:
